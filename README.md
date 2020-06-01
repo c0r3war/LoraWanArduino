@@ -30,5 +30,25 @@ https://robotzero.one/heltec-lora32-lorawan-node/
 Heltec library reference: https://github.com/HelTecAutomation/Heltec_ESP32#api-reference
 ESP 32 hall sensor example: https://gist.github.com/xxlukas42/7e7e18604f61529b8398f7fcc5785251
 
+## First stage: create an application
+![application creation](/images/appcreation.png)
 
+## First test: ABP enrolment mode
+
+In ABP mode, the AppSKey (the key for payload encryption) and the NwkSKey (the key for message integrity check) are statically generated and included in the device's code. 
+
+**This is considered insecure, but it is handfull for tests**
+
+### Step 1: Device registration
+Device must be registered though TTN portal. Device is attached to th application that has been previously created.
+
+![alt](/images/devicereg.png)
+
+By default, the Activation Method is set to OTAA. For the test, it must be changed to ABP in the dvice's settings.
+
+![alt](/images/changeABP.png)
+
+Once validated, NwSKey and AppSKey are genrated by the portal:
+
+![alt](/images/ABPKeys.png)
 
