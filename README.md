@@ -10,7 +10,9 @@
 ## Setup project
 
 1) Create a new workspace.
-2) Create a folder for the project. Folder must contain subb directory named 'build' (this one will be used for Arduino build, it will speed up subsequent compilations). Add the project folder to workspace. 
+2) Create a folder for the project. Folder must contain a sub directory named 'build' (this one will be used for Arduino build, it will speed up subsequent compilations) and a sub directory named like yout sketch (ex:if the sketch file is *ttn-abp-mode.ino*, then the folder name **must** be *ttn-abp-mode*). The later folder will be used to store source files.  
+**Note:** It is very important to comply with naming convention for the source folder, otherwise the Arduino IDE will complain at compile time!  
+Add the project folder to workspace. 
 3) Setup Git repo (don't forget to create a .gitignore to exclude the build folder, .vscode folder, etc).
 4) Setup the Heltec Lora 32 board (shift+cmd+P, Arduino:Board Config), and the serial port to use (shif+cmd+P, Arduino:Select Serial Port).
 5) Setup libraries (shift+cmd+P, Arduino: Library Manager): you will need MCCI LoraWan LMIC Libray (https://github.com/mcci-catena/arduino-lmic) and U8g2 for screen (https://github.com/olikraus/u8g2).
@@ -78,7 +80,7 @@ For security reasons I decided to put these data in a separate header file (*sec
 
     #define _APPSKEY {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
     #define _NWKSKEY {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-    #define _DEVADDR 0x00000000D
+    #define _DEVADDR 0x00000000
 
 The LMIC library also needs to know on which pin the Semtech sx1297 chip is connected. This information is passed thought a *lmic_pinmap* structure:
 
