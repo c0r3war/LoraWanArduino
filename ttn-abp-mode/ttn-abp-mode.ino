@@ -21,6 +21,8 @@
 #define ARDUINO
 #endif
 
+#define DEBUG 
+
 //How to get internal temperature (warning: sensor has been removed on the last version of ESP 32)
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +61,8 @@ const lmic_pinmap lmic_pins = {
     .nss = 18,
     .rxtx = LMIC_UNUSED_PIN,
     .rst = 14,                       // reset pin
-    .dio = {26, 33, 32}, 
+    //.dio = {26, 33, 32},
+    .dio = {26, 35, 34},  
 };
 
 // TX interval in seconds (minimum interval, may be longer)
@@ -70,37 +73,53 @@ static uint8_t mydata[] = "Hello, world!";
 // osjob_t structure
 static osjob_t sendjob;
 
+static int pktCounter = 0;
+static int evtCounter = 0;
+
 // Simple print screen
-void oledPrint (char* format, ...) {
+void oledPrint (int line, char* format, ...) {
     char buffer[255];
     va_list argptr;
     va_start (argptr, format);
-    sprintf (buffer, format, argptr);
-    u8x8.drawString(0, 1, buffer);
+    vsnprintf (buffer, 255, format, argptr);
+    
+    #ifdef DEBUG 
+    Serial.print(os_getTime());
+    Serial.print(": ");
+    Serial.println (buffer);
+    #endif
+
+    u8x8.clearLine (line);
+    u8x8.drawString(0, line, strncpy(buffer, buffer, 16));
+    
     va_end (argptr);
 }
 // LMIC event handler
 void onEvent (ev_t ev) {
     // Serial.print(os_getTime());
     // Serial.print(": ");
+    evtCounter++;
+    oledPrint (5,"%4d events", evtCounter);
+    
     switch(ev) {
         case EV_SCAN_TIMEOUT:
-            oledPrint("EV_SCAN_TIMEOUT");
+            oledPrint(0, "EV_SCAN_TIMEOUT");
             break;
         case EV_BEACON_FOUND:
-            oledPrint("EV_BEACON_FOUND");
+            oledPrint(0, "EV_BEACON_FOUND");
             break;
         case EV_BEACON_MISSED:
-            oledPrint("EV_BEACON_MISSED");
+            oledPrint(0, "EV_BEACON_MISSED");
             break;
         case EV_BEACON_TRACKED:
-            oledPrint("EV_BEACON_TRACKED");
+            oledPrint(0, "EV_BEACON_TRACKED");
             break;
         case EV_JOINING:
-            oledPrint("EV_JOINING");
+            oledPrint(0, "EV_JOINING");
             break;
         case EV_JOINED:
-            oledPrint("EV_JOINED");
+            oledPrint(0, "EV_JOINED");
+            oledPrint(2, "Netwrk joined!");
             break;
         /*
         || This event is defined but not used in the code. No
@@ -111,36 +130,40 @@ void onEvent (ev_t ev) {
         ||     break;
         */
         case EV_JOIN_FAILED:
-            oledPrint("EV_JOIN_FAILED");
+            oledPrint(0, "EV_JOIN_FAILED");
+            oledPrint(2,  "Join failed!");
             break;
         case EV_REJOIN_FAILED:
-            oledPrint("EV_REJOIN_FAILED");
+            oledPrint(0, "EV_REJOIN_FAILED");
+            oledPrint(2, "Rejoin failed!");
             break;
         case EV_TXCOMPLETE:
-            oledPrint("EV_TXCOMPLETE (includes waiting for RX windows)");
+            oledPrint(0, "EV_TXCOMPLETE (includes waiting for RX windows)");
             if (LMIC.txrxFlags & TXRX_ACK)
-              oledPrint("Received ack");
+              oledPrint(1, "Received ack");
             if (LMIC.dataLen) {
-              oledPrint("Rec. %b bytes", LMIC.dataLen);
+              oledPrint(1, "Rec. %b bytes", LMIC.dataLen);
             }
             // Schedule next transmission
+            pktCounter++;
+            oledPrint (4, "%3d packets sent", pktCounter);
             os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
             break;
         case EV_LOST_TSYNC:
-            oledPrint("EV_LOST_TSYNC");
+            oledPrint(0, "EV_LOST_TSYNC");
             break;
         case EV_RESET:
-            oledPrint("EV_RESET");
+            oledPrint(0, "EV_RESET");
             break;
         case EV_RXCOMPLETE:
             // data received in ping slot
-            oledPrint("EV_RXCOMPLETE");
+            oledPrint(0, "EV_RXCOMPLETE");
             break;
         case EV_LINK_DEAD:
-            oledPrint("EV_LINK_DEAD");
+            oledPrint(0, "EV_LINK_DEAD");
             break;
         case EV_LINK_ALIVE:
-            oledPrint("EV_LINK_ALIVE");
+            oledPrint(0, "EV_LINK_ALIVE");
             break;
         /*
         || This event is defined but not used in the code. No
@@ -151,19 +174,19 @@ void onEvent (ev_t ev) {
         ||    break;
         */
         case EV_TXSTART:
-            oledPrint("EV_TXSTART");
+            oledPrint(0, "EV_TXSTART");
             break;
         case EV_TXCANCELED:
-            oledPrint("EV_TXCANCELED");
+            oledPrint(0, "EV_TXCANCELED");
             break;
         case EV_RXSTART:
             /* do not print anything -- it wrecks timing */
             break;
         case EV_JOIN_TXCOMPLETE:
-            oledPrint("EV_JOIN_TXCOMPLETE: no JoinAccept");
+            oledPrint(0, "EV_JOIN_TXCOMPLETE: no JoinAccept");
             break;
         default:
-            oledPrint("Unknown event: %u", (unsigned) ev);
+            oledPrint(0, "Unknown event: %u", (unsigned) ev);
             break;
     }
 }
@@ -172,25 +195,34 @@ void onEvent (ev_t ev) {
 void do_send(osjob_t* j){
     // Check if there is not a current TX/RX job running
     if (LMIC.opmode & OP_TXRXPEND) {
-        oledPrint("OP_TXRXPEND, not sending");
+        oledPrint(0, "OP_TXRXPEND, not sending");
     } else {
         // Prepare upstream data transmission at the next possible time.
         LMIC_setTxData2(1, mydata, sizeof(mydata)-1, 0);
-        oledPrint("Packet queued");
+        oledPrint(2, "Packet queued");
     }
     // Next TX is scheduled after TX_COMPLETE event.
 }
 
 void setup () {
+    int i;
+
+    #ifdef DEBUG 
+    while (!Serial); // wait for Serial to be initialized
+    Serial.begin(115200);
+    delay(100);    
+    Serial.println(F("Starting"));
+    #endif
     u8x8.begin();
     u8x8.setFont(u8x8_font_chroma48medium8_r);
-    oledPrint("LoRaWan ABP test");
+    u8x8.drawString (0, 0, "LoRaWan ABP test");
     
     // LMIC init
-    os_init();
+    i = os_init_ex(&lmic_pins);
+    oledPrint (3, "os_init_ex() returned %1d", i);
     // Reset the MAC state. Session and pending data transfers will be discarded.
     LMIC_reset();
-
+    oledPrint (3, "LMIC init done");
     // Set static session parameters. Instead of dynamically establishing a session
     // by joining the network, precomputed session parameters are be provided.
     #ifdef PROGMEM
@@ -238,7 +270,8 @@ void setup () {
     #endif
 
     // Disable link check validation
-    LMIC_setLinkCheckMode(0);
+    //LMIC_setLinkCheckMode(1);
+    //LMIC_enableTracking(0);
 
     // TTN uses SF9 for its RX2 window.
     LMIC.dn2Dr = DR_SF9;
@@ -248,6 +281,7 @@ void setup () {
 
     // Start job
     do_send(&sendjob);
+    oledPrint (3, "Job started");
 }
 
 void loop () {

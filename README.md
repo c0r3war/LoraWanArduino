@@ -89,7 +89,10 @@ The LMIC library also needs to know on which pin the Semtech sx1297 chip is conn
         .nss = 18,
         .rxtx = LMIC_UNUSED_PIN,
         .rst = 14,                       // reset pin
-        .dio = {26, 33, 32}, 
+        .dio = {26, 35, 34}, 
     };
+
+**Be carreful, these values are valid for Heltec Lora Wifi 32 v2 board only, pins are differents for V1 (and maybe v2.1)**
+
 
 
